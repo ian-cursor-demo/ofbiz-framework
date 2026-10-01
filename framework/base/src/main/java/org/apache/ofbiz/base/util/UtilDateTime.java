@@ -781,6 +781,67 @@ public final class UtilDateTime {
         return new Timestamp(tempCal.getTimeInMillis());
     }
 
+    /**
+     * Checks whether a date/time falls on a Saturday or a Sunday in the given time zone.
+     * @param stamp date/time to check
+     * @param timeZone
+     * @param locale
+     * @return true if the date/time falls on a weekend day
+     */
+    public static boolean isWeekend(Timestamp stamp, TimeZone timeZone, Locale locale) {
+        Calendar cal = toCalendar(stamp);
+        int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
+        return dayOfWeek == Calendar.SATURDAY || dayOfWeek == Calendar.SUNDAY;
+    }
+
+    /**
+     * Adds a number of business days (Monday through Friday) to a date/time, skipping weekends.
+     * A negative number of days moves backwards in time.
+     * @param stamp date/time to start from
+     * @param days number of business days to add
+     * @param timeZone
+     * @param locale
+     * @return the adjusted Timestamp
+     */
+    public static Timestamp addBusinessDays(Timestamp stamp, int days, TimeZone timeZone, Locale locale) {
+        int step = days < 0 ? -1 : 1;
+        int added = 0;
+        Timestamp result = stamp;
+        while (added != days) {
+            result = addDaysToTimestamp(result, step);
+            if (!isWeekend(result, timeZone, locale)) {
+                added++;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Counts the business days (Monday through Friday) between two date/times.
+     * The from day is included and the thru day is excluded. If thru is before from,
+     * the result is negative.
+     * @param from start date/time
+     * @param thru end date/time
+     * @param timeZone
+     * @param locale
+     * @return number of business days between from and thru, or 0 if either is null
+     */
+    public static int getBusinessDaysBetween(Timestamp from, Timestamp thru, TimeZone timeZone, Locale locale) {
+        if (from == null || thru == null) {
+            return 0;
+        }
+        Calendar cal = toCalendar(getDayStart(from, timeZone, locale), timeZone, locale);
+        Calendar thruCal = toCalendar(getDayStart(thru, timeZone, locale), timeZone, locale);
+        int count = 0;
+        while (!cal.after(thruCal)) {
+            if (!isWeekend(new Timestamp(cal.getTimeInMillis()), timeZone, locale)) {
+                count++;
+            }
+            cal.add(Calendar.DAY_OF_MONTH, 1);
+        }
+        return count;
+    }
+
     public static Timestamp getDayStart(Timestamp stamp, TimeZone timeZone, Locale locale) {
         return getDayStart(stamp, 0, timeZone, locale);
     }
